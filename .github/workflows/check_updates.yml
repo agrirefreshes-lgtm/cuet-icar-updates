@@ -1,0 +1,42 @@
+name: CUET & ICAR Daily Updates
+
+on:
+  schedule:
+    # Runs every day at 12:00 PM IST (06:30 AM UTC)
+    - cron: '30 6 * * *'
+  workflow_dispatch: # Allows you to run it manually from GitHub anytime
+
+permissions:
+  contents: write
+
+jobs:
+  check-updates:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Run Update Checker
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_GROUP_ID: ${{ secrets.TELEGRAM_GROUP_ID }}
+        run: |
+          python check_updates.py
+
+      - name: Commit and push changes if seen_notices.json updated
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add seen_notices.json
+          git diff --quiet && git diff --staged --quiet || (git commit -m "chore: update seen_notices cache [skip ci]" && git push)
